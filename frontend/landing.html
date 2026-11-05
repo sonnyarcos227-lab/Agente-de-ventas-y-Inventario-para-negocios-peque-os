@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deco · Decorer Mocoa</title>
+<meta name="description" content="Deco, la asesora virtual de Decorer: precios y existencias reales, por chat o por voz.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --papel:#f4ecdf; --papel-2:#ebe0cf; --tinta:#2a211a; --suave:#6b5d50; --linea:#d8c9b3;
+    --madera:#8a5a2b; --madera-osc:#5e3b19; --carton:#d9b98c; --verde:#2f6b45; --tarjeta:#fbf6ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --papel:#1d1813; --papel-2:#26201a; --tinta:#f1e8dc; --suave:#c2b3a1; --linea:#3d342b;
+      --madera:#d49a5c; --madera-osc:#e8b47c; --carton:#a8865a; --verde:#6fc08f; --tarjeta:#29221b;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --papel:#1d1813; --papel-2:#26201a; --tinta:#f1e8dc; --suave:#c2b3a1; --linea:#3d342b;
+    --madera:#d49a5c; --madera-osc:#e8b47c; --carton:#a8865a; --verde:#6fc08f; --tarjeta:#29221b;
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; background:var(--papel); color:var(--tinta); font:17px/1.6 system-ui,"Segoe UI",sans-serif;
+         background-image: radial-gradient(rgba(120,90,50,.06) 1px, transparent 1px); background-size: 4px 4px; }
+  h1, h2, h3 { font-family:"Fraunces", Georgia, serif; line-height:1.1; margin:0; letter-spacing:-.5px; }
+  a { color:inherit; }
+  .ancho { max-width:1120px; margin:0 auto; padding:0 20px; }
+
+  /* barra */
+  nav { display:flex; align-items:center; gap:14px; padding:18px 0; }
+  nav .marca { font-family:"Fraunces", serif; font-weight:800; font-size:22px; text-decoration:none; }
+  nav .marca small { font-family:system-ui; font-weight:400; font-size:13px; color:var(--suave); margin-left:6px; }
+  nav .der { margin-left:auto; font-size:14px; color:var(--suave); }
+  nav .der a { color:var(--suave); }
+
+  /* hero asimétrico: texto ancho a la izquierda, la "demo" cae sobre el borde */
+  .hero { display:grid; grid-template-columns: 1.25fr .9fr; gap:48px; align-items:center; padding:34px 0 70px; }
+  .hero .antetitulo { font-family:"Caveat", cursive; font-size:26px; line-height:1.15; color:var(--madera); transform:rotate(-2deg); display:inline-block; }
+  .hero h1 { font-size:clamp(38px, 6vw, 66px); font-weight:800; margin:6px 0 18px; }
+  .hero h1 em { font-style:normal; background:linear-gradient(transparent 62%, var(--carton) 62%); padding:0 4px; }
+  .hero p.bajada { font-size:19px; color:var(--suave); max-width:560px; margin:0 0 28px; }
+  .cta { display:inline-flex; align-items:center; gap:12px; text-decoration:none; position:relative;
+         background:var(--carton); color:#2a211a; font-weight:700; font-size:19px; padding:16px 26px 16px 38px;
+         clip-path: polygon(16px 0, 100% 0, 100% 100%, 16px 100%, 0 50%); transition: transform .15s; }
+  .cta::before { content:""; position:absolute; left:14px; top:50%; width:9px; height:9px; margin-top:-4.5px;
+                 border-radius:50%; background:var(--papel); box-shadow: inset 0 0 0 2px rgba(0,0,0,.15); }
+  .cta:hover { transform: translateX(4px) rotate(-1deg); }
+  .cta:focus-visible { outline:3px solid var(--madera); outline-offset:4px; }
+  .secundario { display:block; margin-top:16px; font-size:15px; color:var(--suave); }
+
+  .demo { background:var(--tarjeta); border:1px solid var(--linea); border-radius:18px; padding:18px; transform:rotate(1.2deg);
+          box-shadow: 0 18px 40px -20px rgba(60,40,20,.45); min-height:380px; display:flex; flex-direction:column; gap:10px; }
+  .demo .cab { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--suave); border-bottom:1px dashed var(--linea); padding-bottom:10px; }
+  .demo .cab b { color:var(--tinta); }
+  .demo .punto { width:8px; height:8px; border-radius:50%; background:var(--verde); }
+  .burbuja { max-width:88%; padding:9px 13px; border-radius:14px; font-size:15px; line-height:1.45; opacity:0; transform:translateY(6px);
+             transition: opacity .35s, transform .35s; }
+  .burbuja.ver { opacity:1; transform:none; }
+  .burbuja.cliente { align-self:flex-end; background:#ecdcc8; color:#2a211a; border-bottom-right-radius:4px; }
+  .burbuja.deco { align-self:flex-start; background:var(--papel-2); border-bottom-left-radius:4px; }
+  .burbuja .herr { display:block; font-size:11px; color:var(--suave); margin-top:4px; font-family:ui-monospace, monospace; }
+  .onda { display:inline-flex; gap:3px; align-items:center; height:14px; vertical-align:middle; margin-right:6px; }
+  .onda i { width:3px; background:currentColor; border-radius:2px; animation:onda 1s infinite ease-in-out; }
+  .onda i:nth-child(2) { animation-delay:.15s } .onda i:nth-child(3) { animation-delay:.3s } .onda i:nth-child(4) { animation-delay:.45s }
+  @keyframes onda { 0%,100% { height:4px } 50% { height:14px } }
+
+  section { padding:70px 0; }
+  .rotulo { font-family:"Caveat", cursive; font-size:24px; color:var(--madera); }
+  section h2 { font-size:clamp(30px, 4vw, 44px); font-weight:800; margin:4px 0 14px; max-width:760px; }
+  section .intro { color:var(--suave); max-width:640px; margin:0 0 34px; }
+
+  /* el recorrido de una pregunta: como un ticket de caja */
+  .recorrido { list-style:none; padding:0; margin:0; counter-reset:paso; border-left:2px dashed var(--carton); margin-left:12px; }
+  .recorrido li { counter-increment:paso; position:relative; padding:0 0 28px 34px; }
+  .recorrido li::before { content:counter(paso); position:absolute; left:-15px; top:0; width:28px; height:28px; border-radius:50%;
+                          background:var(--madera); color:var(--papel); font:700 14px/28px "Fraunces", serif; text-align:center; }
+  .recorrido b { display:block; font-size:18px; }
+  .recorrido span { color:var(--suave); font-size:15px; }
+  .recorrido code { font-size:13px; background:var(--papel-2); padding:1px 6px; border-radius:5px; }
+
+  /* dudas: lista, no bento */
+  .dudas { display:grid; grid-template-columns: 1fr 1fr; gap:0 48px; }
+  .duda { border-top:1px solid var(--linea); padding:20px 0; }
+  .duda h3 { font-size:21px; margin-bottom:6px; }
+  .duda p { margin:0; color:var(--suave); }
+  .duda p b { color:var(--tinta); }
+
+  .fotos { display:flex; gap:14px; overflow-x:auto; padding-bottom:8px; scroll-snap-type:x mandatory; }
+  .foto { flex:0 0 240px; scroll-snap-align:start; background:var(--tarjeta); padding:10px 10px 14px; border:1px solid var(--linea);
+          transform:rotate(var(--r, 0deg)); }
+  .foto img { width:100%; height:200px; object-fit:cover; display:block; background:var(--papel-2); }
+  .foto figcaption { font-family:"Caveat", cursive; font-size:21px; margin-top:6px; }
+  .foto.sin-img img { display:none; }
+  .foto.sin-img::before { content:"Foto en el Drive de Decorer"; display:flex; height:200px; align-items:center; justify-content:center;
+                          color:var(--suave); background:var(--papel-2); font-size:14px; }
+
+  .duenio { display:grid; grid-template-columns: .9fr 1.1fr; gap:40px; align-items:center; }
+  .alerta { background:var(--tarjeta); border:1px solid var(--linea); border-left:5px solid #b4382f; border-radius:10px; padding:16px 18px; }
+  .alerta small { color:var(--suave); }
+  .lista-simple { padding-left:20px; color:var(--suave); } .lista-simple li { margin-bottom:6px; } .lista-simple b { color:var(--tinta); }
+
+  .ficha { width:100%; border-collapse:collapse; font-size:15px; }
+  .ficha td { padding:10px 0; border-bottom:1px dashed var(--linea); vertical-align:top; }
+  .ficha td:first-child { color:var(--suave); width:34%; padding-right:16px; }
+
+  .cierre { text-align:center; padding:80px 0 60px; }
+  .cierre h2 { margin:0 auto 22px; }
+  footer { border-top:1px solid var(--linea); padding:28px 0 40px; font-size:14px; color:var(--suave); }
+  footer .cols { display:flex; flex-wrap:wrap; gap:20px 48px; }
+  footer b { color:var(--tinta); }
+
+  @media (max-width: 860px) {
+    .hero, .duenio { grid-template-columns:1fr; gap:34px; }
+    .demo { transform:none; min-height:0; }
+    .dudas { grid-template-columns:1fr; }
+    nav .der .ocultable { display:none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } .burbuja { opacity:1; transform:none; } }
+</style>
+</head>
+<body>
+<div class="ancho">
+  <nav>
+    <a class="marca" href="/">Decorer<small>Mocoa</small></a>
+    <div class="der"><span class="ocultable">Lun a sáb · 9:15–12:15 y 2:00–6:15 · </span><a href="/dueno">Soy el dueño</a></div>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <span class="antetitulo">Atendemos también fuera del horario</span>
+      <h1>Pregúntele a Deco si lo que busca está <em>en bodega</em>.</h1>
+      <p class="bajada">Deco es la asesora virtual de Decorer. Le dice el precio de hoy y cuántas unidades quedan, le explica cómo pagar a cuotas y le aparta el mueble. Puede escribirle o hablarle.</p>
+      <a class="cta" href="/chat">Preguntarle a Deco</a>
+      <a class="secundario" href="#dudas">¿Se puede confiar en lo que dice? Lea esto primero ↓</a>
+    </div>
+    <div class="demo" aria-label="Ejemplo de conversación con Deco">
+      <div class="cab"><span class="punto"></span><b>Deco</b> · asesora virtual</div>
+      <div id="conversacion" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+  </header>
+</div>
+
+<section style="background:var(--papel-2)">
+  <div class="ancho">
+    <span class="rotulo">Por dentro</span>
+    <h2>Lo que pasa entre su pregunta y la respuesta</h2>
+    <p class="intro">Tarda de uno a tres segundos. Este es el camino de una pregunta como "¿tienen colchones de 1.40?" hecha por voz:</p>
+    <ol class="recorrido">
+      <li><b>Deco lo escucha</b><span>faster-whisper convierte su voz en texto, en el mismo computador de la tienda. Conoce las palabras del almacén: Cassata, flor morado, Sistecrédito.</span></li>
+      <li><b>Entiende qué busca</b><span>Un modelo de lenguaje (Groq) decide qué consultar. No contesta de memoria: tiene 10 herramientas y debe usarlas.</span></li>
+      <li><b>Consulta el inventario real</b><span>Precio y existencias salen de PostgreSQL, con los 2.344 artículos que exporta SysCafé. Las políticas (cambios, crédito, domicilios) salen de pgvector, buscadas por significado con EmbeddingGemma.</span></li>
+      <li><b>Arma el pedido sin errores de cuenta</b><span>Totales, descuentos y domicilio gratis desde $500.000 los calcula la base de datos. Al confirmar, una sola transacción descuenta el inventario y registra la venta.</span></li>
+      <li><b>Le responde hablando</b><span>Piper lee la respuesta con voz en español y convierte "$1.150.700" en "un millón ciento cincuenta mil setecientos pesos".</span></li>
+    </ol>
+  </div>
+</section>
+
+<section id="dudas">
+  <div class="ancho">
+    <span class="rotulo">Antes de que lo pregunte</span>
+    <h2>Las dudas que tendríamos nosotros</h2>
+    <p class="intro">Un asistente que vende tiene que ser más cuidadoso que uno que solo conversa. Esto es lo que hicimos para que no meta la pata.</p>
+    <div class="dudas">
+      <div class="duda"><h3>"¿Y si se inventa el precio?"</h3>
+        <p>No puede. <b>Cada precio y cada existencia sale de la base de datos</b> en ese momento. Si un artículo no tiene precio registrado, dice que lo confirma un asesor.</p></div>
+      <div class="duda"><h3>"¿Y si dos personas compran el último sofá?"</h3>
+        <p>Solo uno se lo lleva. La venta <b>bloquea esa unidad mientras se cierra</b> (SELECT … FOR UPDATE); el segundo cliente recibe "ya no quedan". El inventario nunca queda en negativo.</p></div>
+      <div class="duda"><h3>"¿Me va a cobrar sin preguntarme?"</h3>
+        <p>No. Primero le muestra el resumen con el total y le pregunta "¿le confirmo?". <b>Sin su sí, el sistema no deja cerrar la venta</b>, aunque el modelo se equivoque.</p></div>
+      <div class="duda"><h3>"¿Me aprueba el crédito?"</h3>
+        <p>Eso lo deciden Sistecrédito, Addi o la tienda. Deco <b>toma sus datos y un asesor lo llama</b> para el estudio; no promete cupos ni cuotas.</p></div>
+      <div class="duda"><h3>"¿Qué hacen con mi cédula?"</h3>
+        <p>Se usa solo para su pedido. <b>Para consultar un pedido se pide el código y la cédula</b>, así nadie ve las compras de otro.</p></div>
+      <div class="duda"><h3>"¿Y si no sabe la respuesta?"</h3>
+        <p>Lo dice y le pasa el caso a una persona de la tienda por WhatsApp, al <b>322 378 7495</b>. Mejor eso que adivinar.</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--papel-2)">
+  <div class="ancho">
+    <span class="rotulo">Del almacén</span>
+    <h2>Muebles de verdad, fotos de la tienda</h2>
+    <p class="intro">Deco conoce los modelos y colores que maneja Decorer: salas en L, sofacamas, comedores en flor morado y la línea Maderkit.</p>
+    <div class="fotos">
+      <figure class="foto" style="--r:-1.5deg"><img loading="lazy" alt="Sala Roma" data-id="1u71OJBjKR1h4uZhsIKXHCmhcxSqoZKIp"><figcaption>Sala Roma</figcaption></figure>
+      <figure class="foto" style="--r:1deg"><img loading="lazy" alt="Sala Kioto sofacama" data-id="1L5CCAxJpFwV1c4p2uWXK_e-vbONsK7kl"><figcaption>Sofacama Kioto</figcaption></figure>
+      <figure class="foto" style="--r:-.5deg"><img loading="lazy" alt="Comedor flor morado 6 puestos" data-id="13OB4PFDitnIyAa2RN8Kg3WVcFHjMINFN"><figcaption>Comedor flor morado</figcaption></figure>
+      <figure class="foto" style="--r:1.5deg"><img loading="lazy" alt="Sala Italia en L" data-id="1Dmwsdw-eb120o2WWvCQ6nj-j8yVLaA_d"><figcaption>Sala Italia</figcaption></figure>
+      <figure class="foto" style="--r:-1deg"><img loading="lazy" alt="Armario Atlas Maderkit" data-id="1qWB8vTGoT6MJu0GC2Hzcpdfhn_6KBjc3"><figcaption>Armario Atlas</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="ancho duenio">
+    <div>
+      <span class="rotulo">Para la tienda</span>
+      <h2>Mientras Deco vende, el dueño ve todo</h2>
+      <ul class="lista-simple">
+        <li><b>Alerta en vivo</b> cuando una venta deja un producto en el mínimo o agotado.</li>
+        <li><b>Ventas del día y de la semana</b>, por forma de pago y por canal.</li>
+        <li><b>Pendientes:</b> créditos por estudiar, domicilios por cotizar y separados con su saldo.</li>
+        <li><b>Foto de la factura</b> del proveedor: se lee sola y entra al inventario cuando el dueño la revisa.</li>
+        <li><b>Descuadre de SysCafé:</b> 2.122 artículos con saldo negativo que había que revisar.</li>
+      </ul>
+      <a class="secundario" href="/dueno">Abrir el panel del dueño →</a>
+    </div>
+    <div class="alerta" role="img" aria-label="Ejemplo de alerta de stock">
+      <small>Panel del dueño · hace un momento</small>
+      <div style="font-family:Fraunces,serif;font-size:22px;font-weight:600;margin:6px 0">⛔ Se agotó</div>
+      <div>Sillón reclinable: quedan 0 (mínimo 1). Lo vendió Deco por voz, pedido DEC-2611-0031.</div>
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--papel-2)">
+  <div class="ancho">
+    <span class="rotulo">Ficha técnica</span>
+    <h2>Cómo está hecho</h2>
+    <table class="ficha">
+      <tr><td>Datos de la tienda</td><td>PostgreSQL: productos, inventario, kardex, pedidos, separados y ventas. Importados de SysCafé.</td></tr>
+      <tr><td>Conocimiento</td><td>pgvector + EmbeddingGemma (768 dimensiones) en llama.cpp, con políticas, preguntas frecuentes y modelos.</td></tr>
+      <tr><td>Agente</td><td>FastAPI y un modelo de lenguaje en Groq con 10 herramientas, un candado de confirmación y un verificador de respuestas.</td></tr>
+      <tr><td>Voz</td><td>faster-whisper (oído) y Piper es_MX (voz), los dos en el computador, sin tarjeta gráfica.</td></tr>
+      <tr><td>Visión</td><td>qwen2.5vl en Ollama para leer facturas de proveedores.</td></tr>
+      <tr><td>Seguridad</td><td>Usuario de base de datos con permisos mínimos: el agente no puede modificar tablas, solo ejecutar funciones que validan.</td></tr>
+      <tr><td>Evaluación</td><td>86 pruebas automáticas y 18 casos con el modelo real (ver evaluacion/informe.md).</td></tr>
+    </table>
+  </div>
+</section>
+
+<div class="ancho cierre">
+  <h2>¿Buscando algo para la casa?</h2>
+  <a class="cta" href="/chat">Preguntarle a Deco</a>
+</div>
+
+<footer>
+  <div class="ancho cols">
+    <div><b>Decorer</b><br>Carrera 9 # 19-49, Av. Colombia<br>al lado del Hospital José María Hernández, Mocoa</div>
+    <div><b>Horario</b><br>Lunes a sábado<br>9:15 a. m.–12:15 p. m. y 2:00–6:15 p. m.</div>
+    <div><b>Contacto</b><br>WhatsApp 322 378 7495<br>@decorermocoa en Instagram y TikTok</div>
+    <div><b>Proyecto académico</b><br>Agente 14 · Ventas e inventario<br>Agentes de IA · UniPutumayo · Sonny Arcos</div>
+  </div>
+</footer>
+
+<script>
+// fotos del Drive de Decorer (si no cargan, queda un recuadro sencillo)
+document.querySelectorAll(".foto img").forEach(img => {
+  img.onerror = () => img.parentElement.classList.add("sin-img");
+  img.src = `https://drive.google.com/thumbnail?id=${img.dataset.id}&sz=w600`;
+});
+
+// demo del hero: una conversación real de las pruebas, en bucle
+const guion = [
+  ["cliente", '<span class="onda"><i></i><i></i><i></i><i></i></span>¿Tienen colchones de 1.40?'],
+  ["deco", "Sí, el Colchón Cassata 1.40 Armonía a $1.150.700 (4 disponibles) y el Spring 1.40 a $1.787.000. ¿Lo quiere a domicilio?", "buscar_productos · 12 ms"],
+  ["cliente", "El Cassata, a domicilio. ¿Lo puedo pagar a cuotas?"],
+  ["deco", "Claro: con Sistecrédito, Addi o crédito personal. El domicilio le sale gratis porque pasa de $500.000. ¿Me da su cédula y un teléfono?", "agregar_al_pedido · buscar_informacion"],
+];
+const caja = document.getElementById("conversacion");
+const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function reproducir() {
+  caja.innerHTML = "";
+  guion.forEach(([quien, texto, herr], i) => {
+    const b = document.createElement("div");
+    b.className = "burbuja " + quien;
+    b.innerHTML = texto + (herr ? `<span class="herr">${herr}</span>` : "");
+    caja.appendChild(b);
+    setTimeout(() => b.classList.add("ver"), quieto ? 0 : 600 + i * 1700);
+  });
+  if (!quieto) setTimeout(reproducir, 600 + guion.length * 1700 + 4000);
+}
+reproducir();
+</script>
+</body>
+</html>

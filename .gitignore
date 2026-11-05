@@ -1,0 +1,28 @@
+# Secretos (la clave de Groq va aquí)
+.env
+backend/.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Modelos que se descargan solos (pesan cientos de MB)
+backend/voz_modelos/
+*.onnx
+*.gguf
+
+# Audios de las conversaciones (voz de clientes)
+backend/audios/
+
+# Exportes originales de SysCafé (traen costos de la tienda)
+importar/*.pdf
+
+# Resultados crudos de la evaluación (el informe.md sí se sube)
+evaluacion/resultados.json
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini

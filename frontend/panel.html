@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel Decorer</title>
+<style>
+  :root {
+    color-scheme: light;
+    --fondo:#f6f1ea; --tarjeta:#fffdf9; --tinta:#2b2520; --suave:#6f655c; --tenue:#9a8f85; --linea:#e6ddd2;
+    --acento:#8a5a2b; --sobre-acento:#fff; --barra:#8a5a2b; --barra-hover:#6e4520; --pista:#efe6da;
+    --bien:#1f7a3d; --bien-fondo:#e3f2e7; --aviso:#9a6400; --aviso-fondo:#fbefd5; --grave:#b4382f; --grave-fondo:#f8dedb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --fondo:#1b1815; --tarjeta:#24201c; --tinta:#f0ebe4; --suave:#c4b9ad; --tenue:#968b80; --linea:#3a342e;
+      --acento:#d39a5e; --sobre-acento:#1b1815; --barra:#c8904f; --barra-hover:#e0ad74; --pista:#2f2924;
+      --bien:#5fc283; --bien-fondo:#1d3324; --aviso:#e2ac3f; --aviso-fondo:#3a2e14; --grave:#ef7a70; --grave-fondo:#3d1f1c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --fondo:#1b1815; --tarjeta:#24201c; --tinta:#f0ebe4; --suave:#c4b9ad; --tenue:#968b80; --linea:#3a342e;
+    --acento:#d39a5e; --sobre-acento:#1b1815; --barra:#c8904f; --barra-hover:#e0ad74; --pista:#2f2924;
+    --bien:#5fc283; --bien-fondo:#1d3324; --aviso:#e2ac3f; --aviso-fondo:#3a2e14; --grave:#ef7a70; --grave-fondo:#3d1f1c;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,"Segoe UI",sans-serif; background:var(--fondo); color:var(--tinta); font-size:14px; }
+  .envoltura { max-width:1240px; margin:0 auto; padding:16px; }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin-bottom:14px; }
+  header h1 { margin:0; font-size:22px; }
+  header .sub { color:var(--suave); }
+  .controles { margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .seg { display:inline-flex; border:1px solid var(--linea); border-radius:9px; overflow:hidden; }
+  .seg button { border:0; background:var(--tarjeta); color:var(--tinta); padding:7px 12px; cursor:pointer; font:inherit; }
+  .seg button[aria-pressed="true"] { background:var(--acento); color:var(--sobre-acento); }
+  .en-vivo { font-size:12px; color:var(--suave); display:flex; align-items:center; gap:6px; }
+  .punto { width:8px; height:8px; border-radius:50%; background:var(--tenue); }
+  .punto.on { background:var(--bien); box-shadow:0 0 0 3px var(--bien-fondo); }
+  a.enlace { color:var(--acento); }
+
+  .grid { display:grid; gap:14px; grid-template-columns:repeat(12, 1fr); }
+  .tarjeta { background:var(--tarjeta); border:1px solid var(--linea); border-radius:14px; padding:16px; min-width:0; }
+  .tarjeta h2 { font-size:15px; margin:0 0 4px; }
+  .tarjeta .nota { color:var(--suave); font-size:12px; margin:0 0 12px; }
+  .c3 { grid-column:span 3; } .c4 { grid-column:span 4; } .c5 { grid-column:span 5; } .c6 { grid-column:span 6; }
+  .c7 { grid-column:span 7; } .c8 { grid-column:span 8; } .c12 { grid-column:span 12; }
+  @media (max-width: 980px) { .c3 { grid-column:span 6; } .c4,.c5,.c6,.c7,.c8 { grid-column:span 12; } }
+  @media (max-width: 560px) { .c3 { grid-column:span 12; } }
+
+  .kpi .valor { font-size:28px; font-weight:700; letter-spacing:-.5px; font-variant-numeric:tabular-nums; }
+  .kpi .etq { color:var(--suave); font-size:13px; }
+  .kpi .det { color:var(--tenue); font-size:12px; margin-top:4px; }
+
+  /* columnas por día */
+  .columnas { position:relative; height:190px; display:flex; align-items:flex-end; gap:6px; padding:0 0 22px; border-bottom:1px solid var(--linea); }
+  .col { flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; position:relative; cursor:default; }
+  .col .bar { width:100%; max-width:24px; background:var(--barra); border-radius:4px 4px 0 0; min-height:0; }
+  .col:hover .bar, .col:focus .bar { background:var(--barra-hover); }
+  .col .dia { position:absolute; bottom:-20px; font-size:11px; color:var(--tenue); white-space:nowrap; }
+  .col .cero { width:100%; max-width:24px; height:2px; background:var(--pista); }
+  .linea-guia { position:absolute; left:0; right:0; border-top:1px dashed var(--linea); }
+  .linea-guia span { position:absolute; right:0; top:-15px; font-size:11px; color:var(--tenue); background:var(--tarjeta); padding-left:4px; }
+
+  /* barras horizontales */
+  .hbar { display:grid; grid-template-columns: minmax(0, 1.6fr) minmax(60px, 1fr) auto; gap:8px 10px; align-items:center; }
+  .hbar .nom { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .hbar .pista { height:12px; background:var(--pista); border-radius:0 4px 4px 0; }
+  .hbar .lleno { height:100%; background:var(--barra); border-radius:0 4px 4px 0; }
+  .hbar .num { font-variant-numeric:tabular-nums; color:var(--suave); text-align:right; white-space:nowrap; }
+  .hbar > div:hover .lleno { background:var(--barra-hover); }
+
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font-weight:600; color:var(--suave); font-size:12px; padding:6px 8px; border-bottom:1px solid var(--linea); }
+  td { padding:7px 8px; border-bottom:1px dashed var(--linea); vertical-align:top; }
+  td.cod, td.cuando { white-space:nowrap; }
+  td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .tabla-scroll { overflow-x:auto; max-height:320px; overflow-y:auto; }
+  .vacio { color:var(--tenue); padding:12px 0; }
+
+  .estado { display:inline-flex; align-items:center; gap:4px; font-size:12px; padding:2px 8px; border-radius:10px; white-space:nowrap; }
+  .estado.agotado, .estado.critico { background:var(--grave-fondo); color:var(--grave); }
+  .estado.bajo, .estado.aviso { background:var(--aviso-fondo); color:var(--aviso); }
+  .estado.bien { background:var(--bien-fondo); color:var(--bien); }
+
+  .acciones form { display:grid; gap:8px; margin-bottom:16px; }
+  .acciones h3 { font-size:13px; margin:0 0 6px; }
+  input, select { font:inherit; padding:8px 10px; border:1px solid var(--linea); border-radius:8px; background:var(--fondo); color:var(--tinta); width:100%; }
+  .fila { display:flex; gap:8px; } .fila > * { flex:1; }
+  button.prim { font:inherit; border:0; border-radius:8px; padding:9px 12px; background:var(--acento); color:var(--sobre-acento); cursor:pointer; font-weight:600; }
+  .msg-accion { font-size:12px; min-height:16px; }
+  .msg-accion.ok { color:var(--bien); } .msg-accion.mal { color:var(--grave); }
+
+  #tip { position:fixed; pointer-events:none; background:var(--tinta); color:var(--tarjeta); font-size:12px; padding:6px 9px;
+         border-radius:7px; opacity:0; transition:opacity .08s; z-index:10; white-space:nowrap; }
+  .toast { position:fixed; right:16px; bottom:16px; max-width:340px; background:var(--tarjeta); border:1px solid var(--linea);
+           border-left:4px solid var(--grave); border-radius:10px; padding:12px 14px; box-shadow:0 8px 24px rgba(0,0,0,.15);
+           transform:translateY(20px); opacity:0; transition:all .25s; z-index:20; }
+  .toast.ver { transform:none; opacity:1; }
+
+  .subir { display:block; border:2px dashed var(--linea); border-radius:12px; padding:18px; text-align:center; cursor:pointer; color:var(--suave); }
+  .subir:hover, .subir.sobre { border-color:var(--acento); color:var(--tinta); }
+  #fac-foto { max-width:100%; max-height:260px; border-radius:10px; border:1px solid var(--linea); }
+  .fac-grid { display:grid; grid-template-columns: minmax(0, 260px) 1fr; gap:16px; align-items:start; }
+  @media (max-width: 760px) { .fac-grid { grid-template-columns:1fr; } }
+  td input[type=number] { width:70px; } td select { min-width:180px; }
+  #login { max-width:360px; margin:12vh auto; }
+  .oculto { display:none !important; }
+</style>
+</head>
+<body>
+<div class="envoltura">
+
+  <section id="login" class="tarjeta">
+    <h2>Panel del dueño · Decorer</h2>
+    <p class="nota">Ventas, inventario y lo que hizo Deco.</p>
+    <form id="form-login" style="display:grid;gap:10px">
+      <input id="clave" type="password" placeholder="Clave del panel" autocomplete="current-password" required>
+      <button class="prim">Entrar</button>
+      <div id="login-msg" class="msg-accion mal"></div>
+    </form>
+  </section>
+
+  <main id="panel" class="oculto">
+    <header>
+      <h1>Decorer · Panel</h1>
+      <span class="sub" id="periodo-txt"></span>
+      <div class="controles">
+        <div class="seg" role="group" aria-label="Periodo">
+          <button data-dias="1">Hoy</button>
+          <button data-dias="7" aria-pressed="true">7 días</button>
+          <button data-dias="30">30 días</button>
+        </div>
+        <span class="en-vivo"><span class="punto" id="punto"></span><span id="vivo-txt">Conectando alertas…</span></span>
+        <a class="enlace" href="/chat">Ir al chat</a> · <a class="enlace" href="/">Inicio</a>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="tarjeta kpi c3"><div class="etq">Vendido</div><div class="valor" id="k-vendido">—</div><div class="det" id="k-vendido-d"></div></div>
+      <div class="tarjeta kpi c3"><div class="etq">Vendido por Deco</div><div class="valor" id="k-deco">—</div><div class="det" id="k-deco-d"></div></div>
+      <div class="tarjeta kpi c3"><div class="etq">Pendientes del asesor</div><div class="valor" id="k-pend">—</div><div class="det" id="k-pend-d"></div></div>
+      <div class="tarjeta kpi c3"><div class="etq">Inventario disponible</div><div class="valor" id="k-inv">—</div><div class="det" id="k-inv-d"></div></div>
+
+      <section class="tarjeta c8">
+        <h2>Ventas por día</h2><p class="nota" id="nota-dias">Pase el mouse por una columna para ver el detalle.</p>
+        <div class="columnas" id="g-dias"></div>
+      </section>
+
+      <section class="tarjeta c4">
+        <h2>Productos más vendidos</h2><p class="nota">Unidades en el periodo</p>
+        <div class="hbar" id="g-top"></div>
+      </section>
+
+      <section class="tarjeta c4">
+        <h2>Por forma de pago</h2><p class="nota">Valor vendido</p>
+        <div class="hbar" id="g-pago"></div>
+        <h2 style="margin-top:18px">Por canal</h2><p class="nota">Texto, voz o en tienda</p>
+        <div class="hbar" id="g-canal"></div>
+      </section>
+
+      <section class="tarjeta c8">
+        <h2>Alertas de stock</h2><p class="nota">Llegan en vivo cuando una venta deja un producto en el mínimo o agotado.</p>
+        <div class="tabla-scroll"><table><thead><tr><th>Producto</th><th>Estado</th><th class="n">Quedan</th><th class="n">Mínimo</th><th>Cuándo</th></tr></thead>
+        <tbody id="t-alertas"></tbody></table></div>
+      </section>
+
+      <section class="tarjeta c7">
+        <h2>Pendientes del asesor</h2><p class="nota">Créditos por estudiar y domicilios por cotizar.</p>
+        <div class="tabla-scroll"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Qué falta</th><th class="n">Total</th></tr></thead>
+        <tbody id="t-pend"></tbody></table></div>
+      </section>
+
+      <section class="tarjeta c5">
+        <h2>Separados</h2><p class="nota">Productos apartados con abono.</p>
+        <div class="tabla-scroll"><table><thead><tr><th>Pedido</th><th>Cliente</th><th class="n">Abonado</th><th class="n">Saldo</th></tr></thead>
+        <tbody id="t-sep"></tbody></table></div>
+      </section>
+
+      <section class="tarjeta c8">
+        <h2>Últimas ventas</h2><p class="nota">Incluye las que cerró Deco por chat o voz.</p>
+        <div class="tabla-scroll"><table><thead><tr><th>Pedido</th><th>Productos</th><th>Pago</th><th>Canal</th><th class="n">Total</th></tr></thead>
+        <tbody id="t-ventas"></tbody></table></div>
+      </section>
+
+      <section class="tarjeta c4 acciones">
+        <h2>Caja y bodega</h2><p class="nota">Lo que el agente no puede hacer: solo el dueño o el asesor.</p>
+        <form id="f-abono"><h3>Registrar abono a un separado</h3>
+          <div class="fila"><input name="codigo" placeholder="DEC-2611-0001" required><input name="valor" type="number" min="1" placeholder="Valor" required></div>
+          <select name="metodo_pago"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select>
+          <button class="prim">Registrar abono</button><div class="msg-accion"></div></form>
+        <form id="f-entregado"><h3>Marcar pedido entregado</h3>
+          <div class="fila"><input name="codigo" placeholder="DEC-2611-0001" required><button class="prim">Entregado</button></div>
+          <div class="msg-accion"></div></form>
+        <form id="f-entrada"><h3>Entrada de mercancía</h3>
+          <input id="buscar-prod" placeholder="Buscar producto (ej. colchón cassata)" list="lista-prod" autocomplete="off">
+          <datalist id="lista-prod"></datalist>
+          <div class="fila"><input name="cantidad" type="number" min="1" placeholder="Cantidad" required><input name="referencia" placeholder="Factura proveedor"></div>
+          <button class="prim">Registrar entrada</button><div class="msg-accion"></div></form>
+      </section>
+
+      <section class="tarjeta c12" id="sec-factura">
+        <h2>Factura del proveedor (foto)</h2>
+        <p class="nota">Suba la foto de la factura: Deco lee los productos y cantidades con visión artificial (qwen2.5vl) y usted revisa antes de que entre al inventario.</p>
+        <div class="fac-grid">
+          <div>
+            <label class="subir" id="fac-zona" for="fac-archivo">📷 Toque para elegir la foto<br><span style="font-size:12px">o arrástrela aquí</span></label>
+            <input type="file" id="fac-archivo" accept="image/*" capture="environment" class="oculto">
+            <img id="fac-foto" class="oculto" alt="Factura subida">
+          </div>
+          <div>
+            <div id="fac-estado" class="nota"></div>
+            <div id="fac-resultado" class="oculto">
+              <div class="fila" style="margin-bottom:10px"><input id="fac-ref" placeholder="Número de factura"><span id="fac-prov" class="nota" style="align-self:center"></span></div>
+              <div class="tabla-scroll"><table><thead><tr><th></th><th>Dice la factura</th><th>Producto en Decorer</th><th class="n">Cantidad</th></tr></thead>
+              <tbody id="fac-lineas"></tbody></table></div>
+              <button class="prim" id="fac-confirmar" style="margin-top:12px">Confirmar entrada al inventario</button>
+              <div class="msg-accion" id="fac-msg"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tarjeta c6">
+        <h2>Reabastecer</h2><p class="nota">Productos del catálogo bajo el mínimo, con la cantidad sugerida.</p>
+        <div class="tabla-scroll"><table><thead><tr><th>Producto</th><th>Estado</th><th class="n">Hay</th><th class="n">Pedir</th></tr></thead>
+        <tbody id="t-reab"></tbody></table></div>
+        <p class="nota" id="descuadre" style="margin-top:12px"></p>
+      </section>
+
+      <section class="tarjeta c6">
+        <h2>Desempeño de Deco</h2><p class="nota" id="ag-nota"></p>
+        <div class="hbar" id="g-tiempos"></div>
+        <h2 style="margin-top:18px">Qué le piden los clientes</h2><p class="nota">Intención principal de cada turno</p>
+        <div class="hbar" id="g-intenciones"></div>
+      </section>
+    </div>
+  </main>
+</div>
+<div id="tip" role="tooltip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const pesos = n => "$" + Math.round(Number(n || 0)).toLocaleString("es-CO");
+const corto = n => { n = Number(n || 0); return n >= 1e6 ? "$" + (n / 1e6).toLocaleString("es-CO", { maximumFractionDigits: 1 }) + " M"
+                                         : n >= 1e3 ? "$" + Math.round(n / 1e3) + " mil" : pesos(n); };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fecha = s => new Date(s).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+const NOMBRES = { efectivo: "Efectivo", transferencia: "Transferencia", separado: "Separado (abonos)", sistecredito: "Sistecrédito",
+  addi: "Addi", credito_personal: "Crédito personal", texto: "Chat", voz: "Voz", presencial: "En tienda",
+  buscar_productos: "Buscar productos", buscar_informacion: "Políticas y dudas", agregar_al_pedido: "Armar pedido",
+  registrar_cliente: "Datos del cliente", confirmar_compra: "Cerrar venta", separar_producto: "Separar", solicitar_credito: "Crédito",
+  consultar_pedido: "Estado de pedido", cancelar_pedido: "Cancelar", derivar_a_asesor: "Pasar a asesor", conversacion: "Saludo / charla" };
+
+let clave = "", dias = 7, fuente = null;
+try { clave = sessionStorage.getItem("decorer_clave") || ""; } catch (e) {}
+
+// ── tooltip ──
+const tip = $("tip");
+function conTip(el, texto) {
+  el.tabIndex = 0;
+  const ver = ev => { tip.innerHTML = texto; tip.style.opacity = 1; mover(ev); };
+  const mover = ev => { const r = el.getBoundingClientRect();
+    const x = ev && ev.clientX ? ev.clientX : r.left + r.width / 2, y = ev && ev.clientY ? ev.clientY : r.top;
+    tip.style.left = Math.min(x + 12, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (y - tip.offsetHeight - 10) + "px"; };
+  el.addEventListener("mouseenter", ver); el.addEventListener("mousemove", mover); el.addEventListener("focus", ver);
+  el.addEventListener("mouseleave", () => tip.style.opacity = 0); el.addEventListener("blur", () => tip.style.opacity = 0);
+}
+
+// ── gráficas ──
+function columnas(datos) {
+  const c = $("g-dias"); c.innerHTML = "";
+  const max = Math.max(...datos.map(d => Number(d.total)), 0);
+  if (max > 0) {
+    const g = document.createElement("div"); g.className = "linea-guia"; g.style.bottom = (22 + 168) + "px";
+    g.innerHTML = `<span>${corto(max)}</span>`; c.appendChild(g);
+  }
+  const muchos = datos.length > 14;
+  datos.forEach((d, i) => {
+    const col = document.createElement("div"); col.className = "col";
+    const f = new Date(d.dia + "T12:00:00");
+    const h = max ? Math.max(Number(d.total) / max * 168, Number(d.total) > 0 ? 3 : 0) : 0;
+    col.innerHTML = (h ? `<div class="bar" style="height:${h}px"></div>` : `<div class="cero"></div>`) +
+      ((!muchos || i % 5 === 0 || i === datos.length - 1)
+        ? `<span class="dia">${f.toLocaleDateString("es-CO", { weekday: muchos ? undefined : "short", day: "numeric" })}</span>` : "");
+    conTip(col, `<b>${f.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })}</b><br>${pesos(d.total)} · ${d.pedidos} pedido${d.pedidos == 1 ? "" : "s"}`);
+    c.appendChild(col);
+  });
+}
+
+function hbar(id, filas, { valor, etiqueta, texto, vacio = "Sin datos en el periodo." }) {
+  const c = $(id); c.innerHTML = "";
+  if (!filas || !filas.length) { c.innerHTML = `<div class="vacio" style="grid-column:1/-1">${vacio}</div>`; return; }
+  const max = Math.max(...filas.map(f => Number(valor(f))));
+  filas.forEach(f => {
+    const v = Number(valor(f)), nom = etiqueta(f);
+    const a = document.createElement("div"); a.className = "nom"; a.textContent = nom; a.title = nom;
+    const p = document.createElement("div"); p.className = "pista";
+    p.innerHTML = `<div class="lleno" style="width:${max ? Math.max(v / max * 100, v > 0 ? 2 : 0) : 0}%"></div>`;
+    const n = document.createElement("div"); n.className = "num"; n.textContent = texto(f);
+    conTip(p, `<b>${esc(nom)}</b><br>${texto(f)}`);
+    c.append(a, p, n);
+  });
+}
+
+function filas(id, datos, celdas, vacio) {
+  $(id).innerHTML = datos && datos.length ? datos.map(d => `<tr>${celdas(d)}</tr>`).join("")
+    : `<tr><td colspan="6" class="vacio">${vacio}</td></tr>`;
+}
+
+const estadoChip = e => e === "agotado" ? `<span class="estado agotado">⛔ Agotado</span>` : `<span class="estado bajo">⚠ Bajo</span>`;
+
+// ── datos ──
+async function api(ruta, opciones = {}) {
+  const r = await fetch(ruta, { ...opciones, headers: { "X-Clave-Dueno": clave, "Content-Type": "application/json", ...(opciones.headers || {}) } });
+  if (r.status === 401) { salir("Clave incorrecta."); throw new Error("401"); }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.detail || "Error " + r.status);
+  return d;
+}
+
+async function cargar() {
+  const d = await api(`/api/dueno/resumen?dias=${dias}`);
+  const v = d.ventas || {};
+  $("periodo-txt").textContent = dias === 1 ? "Hoy" : `Últimos ${dias} días`;
+  $("k-vendido").textContent = pesos(v.total_vendido);
+  $("k-vendido-d").textContent = `${v.pedidos || 0} pedidos` + (v.pedidos ? ` · ticket promedio ${pesos(v.total_vendido / v.pedidos)}` : "");
+  const deco = (v.por_canal || []).filter(x => x.canal !== "presencial");
+  const decoTotal = deco.reduce((a, x) => a + Number(x.total), 0), decoPed = deco.reduce((a, x) => a + Number(x.pedidos), 0);
+  $("k-deco").textContent = pesos(decoTotal);
+  $("k-deco-d").textContent = `${decoPed} pedidos por chat o voz` + (v.total_vendido ? ` · ${Math.round(decoTotal / v.total_vendido * 100)}% del total` : "");
+  $("k-pend").textContent = d.pendientes_asesor.length;
+  $("k-pend-d").textContent = `${d.separados.length} separados vigentes`;
+  $("k-inv").textContent = corto(d.inventario.valor_venta);
+  $("k-inv-d").textContent = `${d.inventario.con_stock} productos con stock, a precio de venta`;
+
+  columnas(d.por_dia);
+  $("nota-dias").textContent = Number(v.total_vendido) ? "Pase el mouse por una columna para ver el detalle." : "Todavía no hay ventas en este periodo.";
+  hbar("g-top", v.top_productos, { valor: f => f.unidades, etiqueta: f => f.producto, texto: f => `${f.unidades} und · ${corto(f.total)}` });
+  hbar("g-pago", v.por_forma_de_pago, { valor: f => f.total, etiqueta: f => NOMBRES[f.metodo_pago] || f.metodo_pago, texto: f => corto(f.total) });
+  hbar("g-canal", v.por_canal, { valor: f => f.total, etiqueta: f => NOMBRES[f.canal] || f.canal, texto: f => `${f.pedidos} · ${corto(f.total)}` });
+
+  filas("t-alertas", d.alertas, a => `<td>${esc(a.nombre)}</td><td>${estadoChip(a.existencias === 0 ? "agotado" : "bajo")}</td>
+    <td class="n">${a.existencias}</td><td class="n">${a.stock_minimo}</td><td class="cuando">${fecha(a.creada_en)}</td>`, "Sin alertas pendientes. ✓");
+  filas("t-pend", d.pendientes_asesor, p => `<td class="cod">${esc(p.codigo)}</td><td>${esc(p.cliente || "—")}<br><span style="color:var(--tenue)">${esc(p.telefono || "")}</span></td>
+    <td>${p.solicita_credito ? `<span class="estado aviso">Crédito ${esc(NOMBRES[p.solicita_credito] || p.solicita_credito)}</span> ` : ""}${p.domicilio_por_confirmar ? `<span class="estado aviso">Cotizar domicilio</span>` : ""}</td>
+    <td class="n">${pesos(p.total)}</td>`, "Nada pendiente. ✓");
+  filas("t-sep", d.separados, s => `<td class="cod">${esc(s.codigo)}</td><td>${esc(s.cliente || "—")}</td><td class="n">${pesos(s.abonado)}</td><td class="n">${pesos(s.saldo)}</td>`, "No hay separados.");
+  filas("t-ventas", d.ultimas_ventas, s => `<td class="cod">${esc(s.codigo)}<br><span style="color:var(--tenue)">${fecha(s.vendida_en)}</span></td>
+    <td>${esc(s.productos)}</td><td>${esc(NOMBRES[s.metodo_pago] || s.metodo_pago)}</td><td>${esc(NOMBRES[s.canal] || s.canal)}${s.registrada_por === "agente" ? " · Deco" : ""}</td>
+    <td class="n">${pesos(s.total)}</td>`, "Todavía no hay ventas.");
+  filas("t-reab", d.reabastecer, r => `<td>${esc(r.nombre)}</td><td>${estadoChip(r.estado)}</td><td class="n">${r.existencias}</td><td class="n">${r.cantidad_sugerida}</td>`,
+    "Nada por reabastecer en el catálogo de venta.");
+  $("descuadre").textContent = d.descuadre_syscafe.articulos
+    ? `⚠ ${d.descuadre_syscafe.articulos} artículos tienen saldo negativo en SysCafé: se vendieron sin registrar su entrada.` : "";
+
+  const ag = d.agente;
+  $("ag-nota").textContent = ag.turnos
+    ? `${ag.turnos} respuestas en ${ag.conversaciones} conversaciones · ${ag.pct_exito}% sin errores · ${ag.pct_derivado}% pasadas a un asesor · ${ag.turnos_voz} por voz`
+    : "Todavía no hay conversaciones en este periodo.";
+  const tiempos = [["Oído (voz → texto)", ag.ms_stt], ["Pensar (LLM)", ag.ms_llm], ["Consultar la base", ag.ms_herramientas], ["Hablar (texto → voz)", ag.ms_tts]]
+    .filter(t => t[1] != null).map(([nombre, ms]) => ({ nombre, ms: Number(ms) }));
+  hbar("g-tiempos", tiempos, { valor: f => f.ms, etiqueta: f => f.nombre, texto: f => f.ms >= 1000 ? (f.ms / 1000).toFixed(1) + " s" : f.ms + " ms",
+    vacio: "Sin tiempos todavía." });
+  hbar("g-intenciones", d.intenciones.slice(0, 7), { valor: f => f.n, etiqueta: f => NOMBRES[f.intencion] || f.intencion, texto: f => f.n });
+}
+
+// ── alertas en vivo ──
+function toast(html) {
+  const t = $("toast"); t.innerHTML = html; t.classList.add("ver");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("ver"), 7000);
+}
+function escuchar() {
+  if (fuente) fuente.close();
+  fuente = new EventSource(`/api/dueno/alertas?clave=${encodeURIComponent(clave)}`);
+  fuente.addEventListener("listo", () => { $("punto").classList.add("on"); $("vivo-txt").textContent = "Alertas en vivo"; });
+  fuente.addEventListener("stock_bajo", ev => {
+    const a = JSON.parse(ev.data);
+    toast(`<b>${a.estado === "agotado" ? "⛔ Se agotó" : "⚠ Stock bajo"}</b><br>${esc(a.producto)}: quedan ${a.existencias} (mínimo ${a.stock_minimo})`);
+    cargar().catch(() => {});
+  });
+  fuente.onerror = () => { $("punto").classList.remove("on"); $("vivo-txt").textContent = "Reconectando…"; };
+}
+
+// ── acciones del dueño ──
+function accion(id, ruta, cuerpo, exito) {
+  $(id).onsubmit = async ev => {
+    ev.preventDefault();
+    const f = ev.target, msg = f.querySelector(".msg-accion"), datos = Object.fromEntries(new FormData(f));
+    msg.className = "msg-accion"; msg.textContent = "Guardando…";
+    try {
+      const r = await api(ruta, { method: "POST", body: JSON.stringify(cuerpo(datos)) });
+      msg.className = "msg-accion ok"; msg.textContent = exito(r); f.reset(); cargar();
+    } catch (e) { if (e.message !== "401") { msg.className = "msg-accion mal"; msg.textContent = e.message; } }
+  };
+}
+accion("f-abono", "/api/dueno/abono", d => ({ codigo: d.codigo.trim(), valor: Number(d.valor), metodo_pago: d.metodo_pago }),
+  r => r.estado === "confirmado" ? `Abono registrado: ${r.codigo} quedó pagado completo.` : `Abono registrado. Saldo: ${pesos(r.saldo)}`);
+accion("f-entregado", "/api/dueno/entregado", d => ({ codigo: d.codigo.trim() }), r => `${r.codigo} marcado como entregado.`);
+
+let productos = {};
+$("buscar-prod").addEventListener("input", async ev => {
+  const t = ev.target.value.trim();
+  if (t.length < 3 || productos[t]) return;
+  try {
+    const r = await api(`/api/dueno/buscar_producto?texto=${encodeURIComponent(t)}`);
+    $("lista-prod").innerHTML = r.resultados.map(p => { const et = `${p.nombre} · ${p.disponibilidad}`; productos[et] = p.producto_id;
+      return `<option value="${esc(et)}"></option>`; }).join("");
+  } catch (e) {}
+});
+accion("f-entrada", "/api/dueno/entrada", d => {
+  const id = productos[$("buscar-prod").value];
+  if (!id) throw new Error("Elija el producto de la lista.");
+  return { producto_id: id, cantidad: Number(d.cantidad), referencia: d.referencia || null };
+}, r => `Entrada registrada: de ${r.antes} a ${r.despues} unidades.`);
+
+
+// ── factura del proveedor ──
+let factura = null;
+async function subirFactura(archivo) {
+  if (!archivo) return;
+  $("fac-foto").src = URL.createObjectURL(archivo); $("fac-foto").classList.remove("oculto");
+  $("fac-resultado").classList.add("oculto"); $("fac-msg").textContent = "";
+  $("fac-estado").textContent = "Leyendo la factura… en un PC sin tarjeta gráfica puede tardar 1 a 3 minutos.";
+  const fd = new FormData(); fd.append("imagen", archivo);
+  try {
+    const r = await fetch("/api/dueno/factura", { method: "POST", headers: { "X-Clave-Dueno": clave }, body: fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || "No se pudo leer la factura");
+    factura = d;
+    $("fac-estado").textContent = `${d.lineas.length} líneas leídas en ${(d.ms / 1000).toFixed(0)} s con ${d.modelo}. ${d.nota}`;
+    $("fac-ref").value = d.numero_factura || "";
+    $("fac-prov").textContent = d.proveedor ? "Proveedor: " + d.proveedor : "";
+    $("fac-lineas").innerHTML = d.lineas.map((l, i) => `<tr>
+      <td><input type="checkbox" data-i="${i}" ${l.producto_id ? "checked" : ""} aria-label="Incluir línea"></td>
+      <td>${esc(l.descripcion)}${l.codigo_proveedor ? `<br><span style="color:var(--tenue)">${esc(l.codigo_proveedor)}</span>` : ""}</td>
+      <td>${l.candidatos.length ? `<select data-i="${i}">${l.candidatos.map(c =>
+        `<option value="${c.producto_id}">${esc(c.nombre)} (hay ${c.existencias})</option>`).join("")}</select>`
+        : `<span class="estado aviso">⚠ No está en el catálogo</span>`}</td>
+      <td class="n"><input type="number" min="1" value="${l.cantidad}" data-i="${i}"></td></tr>`).join("")
+      || `<tr><td colspan="4" class="vacio">No se encontraron productos.</td></tr>`;
+    $("fac-resultado").classList.remove("oculto");
+  } catch (e) { $("fac-estado").textContent = "✗ " + e.message; }
+}
+$("fac-archivo").onchange = ev => subirFactura(ev.target.files[0]);
+const zona = $("fac-zona");
+zona.ondragover = ev => { ev.preventDefault(); zona.classList.add("sobre"); };
+zona.ondragleave = () => zona.classList.remove("sobre");
+zona.ondrop = ev => { ev.preventDefault(); zona.classList.remove("sobre"); subirFactura(ev.dataTransfer.files[0]); };
+$("fac-confirmar").onclick = async () => {
+  const lineas = [...document.querySelectorAll("#fac-lineas input[type=checkbox]:checked")].map(cb => {
+    const i = cb.dataset.i, sel = document.querySelector(`#fac-lineas select[data-i="${i}"]`);
+    return sel ? { producto_id: Number(sel.value), cantidad: Number(document.querySelector(`#fac-lineas input[type=number][data-i="${i}"]`).value) } : null;
+  }).filter(Boolean);
+  const msg = $("fac-msg");
+  if (!lineas.length) { msg.className = "msg-accion mal"; msg.textContent = "Marque al menos una línea con producto."; return; }
+  msg.className = "msg-accion"; msg.textContent = "Guardando…";
+  try {
+    const r = await api("/api/dueno/factura/confirmar", { method: "POST", body: JSON.stringify({ referencia: $("fac-ref").value || null, lineas }) });
+    msg.className = "msg-accion ok"; msg.textContent = `✓ Entraron ${r.lineas.length} productos al inventario (${r.referencia}).`;
+    $("fac-confirmar").disabled = true; setTimeout(() => $("fac-confirmar").disabled = false, 3000);
+    cargar();
+  } catch (e) { if (e.message !== "401") { msg.className = "msg-accion mal"; msg.textContent = e.message; } }
+};
+
+// ── sesión ──
+function entrar() {
+  $("login").classList.add("oculto"); $("panel").classList.remove("oculto");
+  cargar().then(escuchar).catch(() => {});
+}
+function salir(m) {
+  try { sessionStorage.removeItem("decorer_clave"); } catch (e) {}
+  if (fuente) fuente.close();
+  $("panel").classList.add("oculto"); $("login").classList.remove("oculto"); $("login-msg").textContent = m || "";
+}
+$("form-login").onsubmit = ev => {
+  ev.preventDefault(); clave = $("clave").value;
+  try { sessionStorage.setItem("decorer_clave", clave); } catch (e) {}
+  entrar();
+};
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  dias = Number(b.dataset.dias); cargar().catch(() => {});
+});
+setInterval(() => { if (!$("panel").classList.contains("oculto")) cargar().catch(() => {}); }, 60000);
+if (clave) entrar();
+</script>
+</body>
+</html>
